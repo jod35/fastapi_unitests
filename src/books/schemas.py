@@ -1,9 +1,11 @@
 from enum import Enum
 from pydantic import BaseModel
 
+
 class StatusEnum(str, Enum):
     PUBLIC = "PUBLIC"
     PRIVATE = "PRIVATE"
+
 
 class BookSchema(BaseModel):
     id: str
@@ -13,6 +15,7 @@ class BookSchema(BaseModel):
     level: str
     date_published: str
     status: str
+
 
 class BookCreateSchema(BaseModel):
     title: str
