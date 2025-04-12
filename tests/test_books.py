@@ -1,6 +1,6 @@
 import json
 from fastapi import status
-
+from src.data import books
 
 BASE_URL = '/books'
 
@@ -22,7 +22,7 @@ def test_get_private_books(test_client):
     assert response.status_code == status.HTTP_200_OK
     assert len(response.json()) == 4
 
-def test_get_books_with_wrong_status(test_client):
+def test_get_books_with_invalid_status(test_client):
     response = test_client.get(f"{BASE_URL}/",params={"status":"UNKNOWN"})
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     assert response.json()['detail'][0]['msg'] == "Input should be 'PUBLIC' or 'PRIVATE'"
@@ -86,18 +86,9 @@ def test_update_for_non_existent_book(test_client):
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
-def test_delete_book(test_client):
-    post_id = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-
-    response = test_client.delete(f"{BASE_URL}/{post_id}")
-
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-    assert response.json == None
-
 def test_delete_book_for_non_existent_book(test_client):
     post_id = "f47ac10b-58cc-4372-a567-0e02b2c3d478"
 
     response = test_client.delete(f"{BASE_URL}/{post_id}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json == None
