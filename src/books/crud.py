@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlmodel import desc, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.exc import NoResultFound
@@ -51,6 +51,9 @@ class BookCRUD:
     ):
         book_to_update = await self.get_book_by_uid(session, book_uid=book_uid)
 
+        if not book_to_update:
+            return None
+
         for k, v in book_update_data.items():
             setattr(book_to_update, k, v)
 
@@ -61,5 +64,7 @@ class BookCRUD:
 
     async def delete_book(self, session: AsyncSession, book_uid: str):
         book_to_delete = await self.get_book_by_uid(session, book_uid=book_uid)
+        if not book_to_delete:
+            raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail=f"Book with uuid {book_uid} not found.")
         await session.delete(book_to_delete)
         await session.commit()

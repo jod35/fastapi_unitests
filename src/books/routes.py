@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter, status, Depends
+from fastapi.exceptions import HTTPException
 from src.books.schemas import BookSchema, BookCreateSchema, StatusEnum
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.books.crud import BookCRUD
@@ -31,8 +32,12 @@ async def create_post(
 @book_router.get("/{book_uid}", response_model=BookSchema)
 async def get_book(book_uid: str, session: AsyncSession = Depends(get_session)) -> dict:
     book = await book_crud.get_book_by_uid(session, book_uid)
+    if book is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found",
+        )
     return book
-
 
 @book_router.put("/{book_uid}", response_model=BookSchema)
 async def update_book(
@@ -43,9 +48,15 @@ async def update_book(
     updated_book = await book_crud.update_book(
         session, book_uid, update_data.model_dump()
     )
+    if updated_book is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found",
+        )
     return updated_book
 
 
 @book_router.delete("/{book_uid}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book(book_uid: str, session: AsyncSession = Depends(get_session)):
     await book_crud.delete_book(session, book_uid)
+    return None
