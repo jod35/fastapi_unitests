@@ -1,94 +1,123 @@
+from fastapi import status, HTTPException
 import json
-from fastapi import status
-from src.data import books
 
-BASE_URL = '/books'
+import pytest
+
+BASE_URL = "/books"
+
+
+def test_create_get_book(test_client, test_book_payload):
+    response = test_client.post(f"{BASE_URL}/", content=json.dumps(test_book_payload))
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["title"] == "Python Testing with pytest"
+
+    book_id = response.json()["id"]
+
+    response = test_client.get(f"{BASE_URL}/{book_id}")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["id"] == str(book_id)
+    assert response.json()["title"] == "Python Testing with pytest"
+
+def test_create_book_with_invalid_payload(test_client):
+    invalid_payload = {
+        "title": "Python Testing with pytest",
+        "author": "Brian Okken",
+        # Missing required fields
+    }
+    response = test_client.post(f"{BASE_URL}/", content=json.dumps(invalid_payload))
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.json()["detail"][0]["msg"] == "Field required"
+
+
+def test_get_book_not_found(test_client):
+    # Assuming a book with ID '123e4567-e89b-12d3-a456-426614174000' does not exist
+    response = test_client.get(f"{BASE_URL}/123e4567-e89b-12d3-a456-426614174000")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Book not found"
+
 
 def test_get_all_books(test_client):
     response = test_client.get(f"{BASE_URL}/")
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.json()) == 8
+    assert len(response.json()) > 0
 
-def test_get_public_books(test_client):
-    response = test_client.get(f"{BASE_URL}/",params={"status":"PUBLIC"})
 
+def test_get_all_public_books(test_client):
+    response = test_client.get(f"{BASE_URL}/", params={"status": "PUBLIC"})
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.json()) == 4
+    assert len(response.json()) > 0
 
 
-def test_get_private_books(test_client):
-    response = test_client.get(f"{BASE_URL}/",params={"status":"PRIVATE"})
-
+def test_get_all_private_books(test_client):
+    response = test_client.get(f"{BASE_URL}/", params={"status": "PRIVATE"})
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.json()) == 4
+    assert len(response.json()) > 0
 
 def test_get_books_with_invalid_status(test_client):
-    response = test_client.get(f"{BASE_URL}/",params={"status":"UNKNOWN"})
+    # Assuming 'INVALID_STATUS' is not a valid status
+    response = test_client.get(f"{BASE_URL}/", params={"status": "INVALID_STATUS"})
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    assert response.json()['detail'][0]['msg'] == "Input should be 'PUBLIC' or 'PRIVATE'"
+    assert response.json()["detail"][0]["msg"] == "Input should be 'PUBLIC' or 'PRIVATE'"
 
-def test_create_post(test_client):
-    test_create_data = {
-        "title": "Mastering Async Python",
-        "author": "Sophie Carter",
-        "description": "A comprehensive guide to asynchronous programming in Python, with a focus on FastAPI and real-world applications.",
-        "level": "Intermediate to Advanced",
-        "date_published": "2024-03-15",
-        "status": "PRIVATE"
-    }
 
-    response = test_client.post(f"{BASE_URL}/",content=json.dumps(test_create_data))
+def test_create_update_book(test_client, test_book_payload, test_book_update_payload):
+    # Create a book first
+    response = test_client.post(f"{BASE_URL}/", content=json.dumps(test_book_payload))
+    book_id = response.json()["id"]
 
-    assert response.status_code == status.HTTP_201_CREATED
-    assert response.json()['title'] == "Mastering Async Python"
-
-def test_get_book(test_client):
-    post_id = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-    response = test_client.get(f"{BASE_URL}/{post_id}")
-
+    # Update the book
+    response = test_client.put(
+        f"{BASE_URL}/{book_id}", content=json.dumps(test_book_update_payload)
+    )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()['id'] == post_id
+    assert response.json()["title"] == "Updated Python Testing with pytest"
 
-def test_get_book_not_found(test_client):
-    post_id = "f47ac10b-58cc-4372-a567-0e02b2c3d473"
-    response = test_client.get(f"{BASE_URL}/{post_id}")
 
+def test_update_book_not_found(test_client, test_book_update_payload):
+    # Assuming a book with ID '123e4567-e89b-12d3-a456-426614174000' does not exist
+    response = test_client.put(
+        f"{BASE_URL}/123e4567-e89b-12d3-a456-426614174000",
+        content=json.dumps(test_book_update_payload),
+    )
     assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Book not found"
 
-def test_update(test_client):
-    post_id = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 
-    updated_data = {
-        "author": "Sophie Doe",
-        "description": "A comprehensive guide to asynchronous programming in Python, with a focus on FastAPI and real-world applications.",
-        "title": "Mastering Async Python",
-        "level": "Intermediate to Advanced",
-        "date_published": "2024-03-15",
-        "status": "PRIVATE"
+def test_update_book_with_invalid_payload(test_client, test_book_payload):
+    # Create a book first
+    response = test_client.post(f"{BASE_URL}/", content=json.dumps(test_book_payload))
+    book_id = response.json()["id"]
+
+    # Update the book with invalid payload
+    invalid_payload = {
+        "title": "Updated Python Testing with pytest",
+        "author": "Brian Okken",
+        # Missing required fields
     }
-    response = test_client.put(f"{BASE_URL}/{post_id}", content=json.dumps(updated_data))
+    response = test_client.put(
+        f"{BASE_URL}/{book_id}", content=json.dumps(invalid_payload)
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.json()["detail"][0]["msg"] == "Field required"
+    
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()['author'] == "Sophie Doe"
+def test_create_delete_book(test_client, test_book_payload):
+    response = test_client.post(f"{BASE_URL}/", content=json.dumps(test_book_payload))
+    book_id = response.json()["id"]
+    response = test_client.delete(f"{BASE_URL}/{book_id}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
-def test_update_for_non_existent_book(test_client):
-    post_id = "f47ac10b-58cc-4372-a567-0e02b2c3d478"
-
-    updated_data = {
-        "author": "Sophie Doe",
-        "description": "A comprehensive guide to asynchronous programming in Python, with a focus on FastAPI and real-world applications.",
-        "title": "Mastering Async Python",
-        "level": "Intermediate to Advanced",
-        "date_published": "2024-03-15",
-        "status": "PRIVATE"
-    }
-    response = test_client.put(f"{BASE_URL}/{post_id}", content=json.dumps(updated_data))
-
+    # Check if the book is really deleted
+    response = test_client.get(f"{BASE_URL}/{book_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Book not found"
 
-def test_delete_book_for_non_existent_book(test_client):
-    post_id = "f47ac10b-58cc-4372-a567-0e02b2c3d478"
 
-    response = test_client.delete(f"{BASE_URL}/{post_id}")
-
+def test_delete_book_not_found(test_client):
+    # Assuming a book with ID '123e4567-e89b-12d3-a456-426614174000' does not exist
+    response = test_client.delete(f"{BASE_URL}/123e4567-e89b-12d3-a456-426614174000")
     assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert (
+        response.json()["detail"]
+        == "Book with uuid 123e4567-e89b-12d3-a456-426614174000 not found."
+    )
