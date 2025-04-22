@@ -1,0 +1,12 @@
+services:
+  web:
+    image: fastapi_tests_app:v1
+    ports:
+      - "8000:8000"
+    networks:
+      - fastapi_tests_network
+
+networks:
+  fastapi_tests_network:
+    external: true
+    name: fastapi_tests_network
