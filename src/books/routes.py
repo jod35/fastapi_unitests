@@ -6,7 +6,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.books.crud import BookCRUD
 from src.db.dependencies import get_session
 from src.db.models import Book
-
 book_router = APIRouter()
 book_crud = BookCRUD()
 
